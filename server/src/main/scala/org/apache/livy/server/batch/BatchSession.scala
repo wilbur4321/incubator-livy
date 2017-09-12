@@ -35,6 +35,7 @@ import org.apache.livy.utils.{AppInfo, SparkApp, SparkAppListener, SparkProcessB
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class BatchRecoveryMetadata(
     id: Int,
+    name: String,
     appId: Option[String],
     appTag: String,
     owner: String,
@@ -53,6 +54,7 @@ object BatchSession extends Logging {
 
   def create(
       id: Int,
+      name: String,
       request: CreateBatchRequest,
       livyConf: LivyConf,
       accessManager: AccessManager,
@@ -110,6 +112,7 @@ object BatchSession extends Logging {
 
     new BatchSession(
       id,
+      name,
       appTag,
       SessionState.Starting,
       livyConf,
@@ -126,6 +129,7 @@ object BatchSession extends Logging {
       mockApp: Option[SparkApp] = None): BatchSession = {
     new BatchSession(
       m.id,
+      m.name,
       m.appTag,
       SessionState.Recovering,
       livyConf,
@@ -140,6 +144,7 @@ object BatchSession extends Logging {
 
 class BatchSession(
     id: Int,
+    name: String,
     appTag: String,
     initialState: SessionState,
     livyConf: LivyConf,
@@ -147,7 +152,7 @@ class BatchSession(
     override val proxyUser: Option[String],
     sessionStore: SessionStore,
     sparkApp: BatchSession => SparkApp)
-  extends Session(id, owner, livyConf) with SparkAppListener {
+  extends Session(id, name, owner, livyConf) with SparkAppListener {
   import BatchSession._
 
   protected implicit def executor: ExecutionContextExecutor = ExecutionContext.global
@@ -187,5 +192,5 @@ class BatchSession(
   override def infoChanged(appInfo: AppInfo): Unit = { this.appInfo = appInfo }
 
   override def recoveryMetadata: RecoveryMetadata =
-    BatchRecoveryMetadata(id, appId, appTag, owner, proxyUser)
+    BatchRecoveryMetadata(id, name, appId, appTag, owner, proxyUser)
 }

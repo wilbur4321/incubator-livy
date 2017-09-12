@@ -23,6 +23,7 @@ import javax.servlet.http.HttpServletRequest
 import org.scalatra._
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 import org.apache.livy.{LivyConf, Logging}
 import org.apache.livy.rsc.RSCClientFactory
@@ -182,8 +183,15 @@ abstract class SessionServlet[S <: Session, R <: RecoveryMetadata](
   private def doWithSession(fn: (S => Any),
       allowAll: Boolean,
       checkFn: Option[(String, String) => Boolean]): Any = {
-    val sessionId = params("id").toInt
-    sessionManager.get(sessionId) match {
+    val idParam: String = params("id")
+    val session = if (idParam.forall(_.isDigit)) {
+      val sessionId = idParam.toInt
+      sessionManager.get(sessionId)
+    } else {
+      val sessionName = idParam
+      sessionManager.get(sessionName)
+    }
+    session match {
       case Some(session) =>
         if (allowAll || checkFn.map(_(session.owner, remoteUser(request))).getOrElse(false)) {
           fn(session)
@@ -191,7 +199,7 @@ abstract class SessionServlet[S <: Session, R <: RecoveryMetadata](
           Forbidden()
         }
       case None =>
-        NotFound(s"Session '$sessionId' not found.")
+        NotFound(s"Session '$idParam' not found.")
     }
   }
 
