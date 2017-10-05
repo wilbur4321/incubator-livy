@@ -132,6 +132,7 @@ abstract class SessionServlet[S <: Session, R <: RecoveryMetadata](
       BadRequest("Rejected, too many sessions are being created!")
     } else {
       val session = sessionManager.register(createSession(request))
+    session.startSession
       // Because it may take some time to establish the session, update the last activity
       // time before returning the session info to the client.
       session.recordActivity()
@@ -183,12 +184,12 @@ abstract class SessionServlet[S <: Session, R <: RecoveryMetadata](
   private def doWithSession(fn: (S => Any),
       allowAll: Boolean,
       checkFn: Option[(String, String) => Boolean]): Any = {
-    val idParam: String = params("id")
-    val session = if (idParam.forall(_.isDigit)) {
-      val sessionId = idParam.toInt
+    val idOrNameParam: String = params("id")
+    val session = if (idOrNameParam.forall(_.isDigit)) {
+      val sessionId = idOrNameParam.toInt
       sessionManager.get(sessionId)
     } else {
-      val sessionName = idParam
+      val sessionName = idOrNameParam
       sessionManager.get(sessionName)
     }
     session match {
@@ -199,7 +200,7 @@ abstract class SessionServlet[S <: Session, R <: RecoveryMetadata](
           Forbidden()
         }
       case None =>
-        NotFound(s"Session '$idParam' not found.")
+        NotFound(s"Session '$idOrNameParam' not found.")
     }
   }
 
