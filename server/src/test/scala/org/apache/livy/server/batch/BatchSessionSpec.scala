@@ -70,7 +70,7 @@ class BatchSessionSpec
 
       val conf = new LivyConf().set(LivyConf.LOCAL_FS_WHITELIST, sys.props("java.io.tmpdir"))
       val accessManager = new AccessManager(conf)
-      val batch = BatchSession.create(0, "Test Batch Session", req, conf, accessManager, null, sessionStore)
+      val batch = BatchSession.create(0, None, req, conf, accessManager, null, sessionStore)
 
       Utils.waitUntil({ () => !batch.state.isActive }, Duration(10, TimeUnit.SECONDS))
       (batch.state match {
@@ -87,8 +87,9 @@ class BatchSessionSpec
       val mockApp = mock[SparkApp]
       val accessManager = new AccessManager(conf)
       val batch = BatchSession.create(
-        0, "Test Batch Session", req, conf, accessManager, null, sessionStore, Some(mockApp))
+        0, None, req, conf, accessManager, null, sessionStore, Some(mockApp))
 
+      batch.start()
       val expectedAppId = "APPID"
       batch.appIdKnown(expectedAppId)
       verify(sessionStore, atLeastOnce()).save(
@@ -100,11 +101,25 @@ class BatchSessionSpec
       batch.appInfo shouldEqual expectedAppInfo
     }
 
-    it("should recover session") {
+    it("should recover named session") {
       val conf = new LivyConf()
       val req = new CreateBatchRequest()
       val mockApp = mock[SparkApp]
-      val m = BatchRecoveryMetadata(99, "Test Batch Session", None, "appTag", null, None)
+      val m = BatchRecoveryMetadata(99, Some("Test Batch Session"), None, "appTag", null, None)
+      val batch = BatchSession.recover(m, conf, sessionStore, Some(mockApp))
+
+      batch.state shouldBe a[SessionState.Recovering]
+
+      batch.appIdKnown("appId")
+      verify(sessionStore, atLeastOnce()).save(
+        Matchers.eq(BatchSession.RECOVERY_SESSION_TYPE), anyObject())
+    }
+
+    it("should recover session with no name ") {
+      val conf = new LivyConf()
+      val req = new CreateBatchRequest()
+      val mockApp = mock[SparkApp]
+      val m = BatchRecoveryMetadata(999, None, None, "appTag", null, None)
       val batch = BatchSession.recover(m, conf, sessionStore, Some(mockApp))
 
       batch.state shouldBe (SessionState.Recovering)

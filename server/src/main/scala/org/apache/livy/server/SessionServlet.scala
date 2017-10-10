@@ -132,7 +132,6 @@ abstract class SessionServlet[S <: Session, R <: RecoveryMetadata](
       BadRequest("Rejected, too many sessions are being created!")
     } else {
       val session = sessionManager.register(createSession(request))
-    session.startSession
       // Because it may take some time to establish the session, update the last activity
       // time before returning the session info to the client.
       session.recordActivity()

@@ -34,6 +34,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.common.annotations.VisibleForTesting
 import org.apache.hadoop.fs.Path
 import org.apache.spark.launcher.SparkLauncher
+
 import org.apache.livy._
 import org.apache.livy.client.common.HttpMessages._
 import org.apache.livy.rsc.{PingJob, RSCClient, RSCConf}
@@ -48,7 +49,7 @@ import org.apache.livy.utils._
 @JsonIgnoreProperties(ignoreUnknown = true)
 case class InteractiveRecoveryMetadata(
     id: Int,
-    name: String,
+    name: Option[String],
     appId: Option[String],
     appTag: String,
     kind: Kind,
@@ -66,7 +67,7 @@ object InteractiveSession extends Logging {
 
   def create(
       id: Int,
-      name: String,
+      name: Option[String],
       owner: String,
       livyConf: LivyConf,
       accessManager: AccessManager,
@@ -350,7 +351,7 @@ object InteractiveSession extends Logging {
 
 class InteractiveSession(
     id: Int,
-    name: String,
+    name: Option[String],
     appIdHint: Option[String],
     appTag: String,
     val client: Option[RSCClient],
@@ -384,10 +385,9 @@ class InteractiveSession(
   sessionStore.save(RECOVERY_SESSION_TYPE, recoveryMetadata)
   heartbeat()
 
-  private var app :Option[SparkApp] = None
+  private var app: Option[SparkApp] = None
 
-
-  override def logLines(): IndexedSeq[String] = app.trySuccess()map(_.log()).getOrElse(sessionLog)
+  override def logLines(): IndexedSeq[String] = app.map(_.log()).getOrElse(sessionLog)
 
   override def recoveryMetadata: RecoveryMetadata =
     InteractiveRecoveryMetadata( id, name, appId, appTag, kind, heartbeatTimeout.toSeconds.toInt,
@@ -405,7 +405,7 @@ class InteractiveSession(
     }
   }
 
-  override def startSession(): Unit = {
+  override def start(): Unit = {
     app = mockApp.orElse {
       val driverProcess = client.flatMap { c => Option(c.getDriverProcess) }
         .map(new LineBufferedProcess(_, livyConf.getInt(LivyConf.SPARK_LOGS_SIZE)))
@@ -441,9 +441,9 @@ class InteractiveSession(
 
         override def onJobSucceeded(job: JobHandle[Void], result: Void): Unit = {
           transition(SessionState.Running)
-          info(s"Interactive session $id created [appid: ${appId.orNull}, owner: $owner, proxyUser:" +
-            s" $proxyUser, state: ${state.toString}, kind: ${kind.toString}, " +
-            s"info: ${appInfo.asJavaMap}]")
+          info(s"Interactive session $id created [appid: ${appId.orNull}, " +
+            s"owner: $owner, proxyUser: $proxyUser, state: ${state.toString}, " +
+            s"kind: ${kind.toString}, info: ${appInfo.asJavaMap}]")
         }
 
         private def errorOut(): Unit = {
