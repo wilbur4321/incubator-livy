@@ -73,6 +73,8 @@ class SessionManager[S <: Session, R <: RecoveryMetadata : ClassTag](
 
   protected[this] final val idCounter = new AtomicInteger(0)
   protected[this] final val sessions = mutable.LinkedHashMap[Int, S]()
+  private[this] final val sessionsByName = mutable.HashMap[String, S]()
+
 
   private[this] final val sessionTimeoutCheck = livyConf.getBoolean(LivyConf.SESSION_TIMEOUT_CHECK)
   private[this] final val sessionTimeout =
@@ -92,12 +94,26 @@ class SessionManager[S <: Session, R <: RecoveryMetadata : ClassTag](
   def register(session: S): S = {
     info(s"Registering new session ${session.id}")
     synchronized {
+      session.name.map { sessionName =>
+        if (sessionsByName.contains(sessionName)) {
+          val msg = s"Session ${session.name} already exists!"
+          error(msg)
+          delete(session)
+          throw new IllegalArgumentException(msg)
+        } else {
+          // info(s"sessionNames = ${sessionsByName.keys.mkString}")
+          sessionsByName.put(sessionName, session)
+        }
+      }
       sessions.put(session.id, session)
+      session.start()
     }
     session
   }
 
   def get(id: Int): Option[S] = sessions.get(id)
+
+  def get(sessionName: String): Option[S] = sessionsByName.get(sessionName)
 
   def size(): Int = sessions.size
 
@@ -113,6 +129,7 @@ class SessionManager[S <: Session, R <: RecoveryMetadata : ClassTag](
         sessionStore.remove(sessionType, session.id)
         synchronized {
           sessions.remove(session.id)
+          session.name.foreach(sessionsByName.remove)
         }
       } catch {
         case NonFatal(e) =>

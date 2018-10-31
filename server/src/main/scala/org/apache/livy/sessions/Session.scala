@@ -21,7 +21,6 @@ import java.io.InputStream
 import java.net.{URI, URISyntaxException}
 import java.security.PrivilegedExceptionAction
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -132,7 +131,8 @@ object Session {
   }
 }
 
-abstract class Session(val id: Int, val owner: String, val livyConf: LivyConf)
+abstract class Session(val id: Int, val name: Option[String], val owner: String,
+                       val livyConf: LivyConf)
   extends Logging {
 
   import Session._
@@ -167,6 +167,8 @@ abstract class Session(val id: Int, val owner: String, val livyConf: LivyConf)
   def recoveryMetadata: RecoveryMetadata
 
   def state: SessionState
+
+  def start(): Unit
 
   def stop(): Future[Unit] = Future {
     try {

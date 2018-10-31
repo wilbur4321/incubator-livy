@@ -56,6 +56,7 @@ class InteractiveSessionServletSpec extends BaseInteractiveServletSpec {
 
       val session = mock[InteractiveSession]
       when(session.kind).thenReturn(Spark())
+      when(session.name).thenReturn(None)
       when(session.appId).thenReturn(None)
       when(session.appInfo).thenReturn(AppInfo())
       when(session.logLines()).thenReturn(IndexedSeq())
@@ -149,6 +150,7 @@ class InteractiveSessionServletSpec extends BaseInteractiveServletSpec {
 
   it("should show session properties") {
     val id = 0
+    val name = "TEST-interactive-session"
     val appId = "appid"
     val owner = "owner"
     val proxyUser = "proxyUser"
@@ -159,6 +161,7 @@ class InteractiveSessionServletSpec extends BaseInteractiveServletSpec {
 
     val session = mock[InteractiveSession]
     when(session.id).thenReturn(id)
+    when(session.name).thenReturn(Some(name))
     when(session.appId).thenReturn(Some(appId))
     when(session.owner).thenReturn(owner)
     when(session.proxyUser).thenReturn(Some(proxyUser))
@@ -173,6 +176,45 @@ class InteractiveSessionServletSpec extends BaseInteractiveServletSpec {
       .asInstanceOf[SessionInfo]
 
     view.id shouldEqual id
+    view.name shouldEqual name
+    view.appId shouldEqual appId
+    view.owner shouldEqual owner
+    view.proxyUser shouldEqual proxyUser
+    view.state shouldEqual state.toString
+    view.kind shouldEqual kind.toString
+    view.appInfo should contain (Entry(AppInfo.DRIVER_LOG_URL_NAME, appInfo.driverLogUrl.get))
+    view.appInfo should contain (Entry(AppInfo.SPARK_UI_URL_NAME, appInfo.sparkUiUrl.get))
+    view.log shouldEqual log.asJava
+  }
+
+  it("should show session properties for sessions without a name") {
+    val id = 0
+    val appId = "appid"
+    val owner = "owner"
+    val proxyUser = "proxyUser"
+    val state = SessionState.Running()
+    val kind = Spark()
+    val appInfo = AppInfo(Some("DRIVER LOG URL"), Some("SPARK UI URL"))
+    val log = IndexedSeq[String]("log1", "log2")
+
+    val session = mock[InteractiveSession]
+    when(session.id).thenReturn(id)
+    when(session.name).thenReturn(None)
+    when(session.appId).thenReturn(Some(appId))
+    when(session.owner).thenReturn(owner)
+    when(session.proxyUser).thenReturn(Some(proxyUser))
+    when(session.state).thenReturn(state)
+    when(session.kind).thenReturn(kind)
+    when(session.appInfo).thenReturn(appInfo)
+    when(session.logLines()).thenReturn(log)
+
+    val req = mock[HttpServletRequest]
+
+    val view = servlet.asInstanceOf[InteractiveSessionServlet].clientSessionView(session, req)
+      .asInstanceOf[SessionInfo]
+
+    view.id shouldEqual id
+    view.name shouldEqual null
     view.appId shouldEqual appId
     view.owner shouldEqual owner
     view.proxyUser shouldEqual proxyUser
