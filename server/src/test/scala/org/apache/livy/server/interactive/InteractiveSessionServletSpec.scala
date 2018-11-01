@@ -196,8 +196,8 @@ class InteractiveSessionServletSpec extends BaseInteractiveServletSpec {
     val appId = "appid"
     val owner = "owner"
     val proxyUser = "proxyUser"
-    val state = SessionState.Running()
-    val kind = Spark()
+    val state = SessionState.Running
+    val kind = Spark
     val appInfo = AppInfo(Some("DRIVER LOG URL"), Some("SPARK UI URL"))
     val log = IndexedSeq[String]("log1", "log2")
 

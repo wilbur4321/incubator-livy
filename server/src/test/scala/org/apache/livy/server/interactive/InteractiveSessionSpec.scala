@@ -253,7 +253,7 @@ class InteractiveSessionSpec extends FunSpec
       val s = InteractiveSession.recover(m, conf, sessionStore, None, Some(mockClient))
       s.start()
 
-      s.state shouldBe a[SessionState.Recovering]
+      s.state shouldBe (SessionState.Recovering)
 
       s.appIdKnown("appId")
       verify(sessionStore, atLeastOnce()).save(

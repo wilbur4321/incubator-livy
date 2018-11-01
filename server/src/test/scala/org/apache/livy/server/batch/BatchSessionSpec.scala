@@ -71,6 +71,7 @@ class BatchSessionSpec
       val conf = new LivyConf().set(LivyConf.LOCAL_FS_WHITELIST, sys.props("java.io.tmpdir"))
       val accessManager = new AccessManager(conf)
       val batch = BatchSession.create(0, None, req, conf, accessManager, null, sessionStore)
+      batch.start()
 
       Utils.waitUntil({ () => !batch.state.isActive }, Duration(10, TimeUnit.SECONDS))
       (batch.state match {
@@ -108,7 +109,7 @@ class BatchSessionSpec
       val m = BatchRecoveryMetadata(99, Some("Test Batch Session"), None, "appTag", null, None)
       val batch = BatchSession.recover(m, conf, sessionStore, Some(mockApp))
 
-      batch.state shouldBe a[SessionState.Recovering]
+      batch.state shouldBe (SessionState.Recovering)
 
       batch.appIdKnown("appId")
       verify(sessionStore, atLeastOnce()).save(

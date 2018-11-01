@@ -394,15 +394,13 @@ class InteractiveSession(
       owner, proxyUser, rscDriverUri)
 
   override def state: SessionState = {
-    if (serverSideState.isInstanceOf[SessionState.Running]) {
+    if (serverSideState == SessionState.Running) {
       // If session is in running state, return the repl state from RSCClient.
       client
         .flatMap(s => Option(s.getReplState))
         .map(SessionState(_))
-        .getOrElse(SessionState.Busy()) // If repl state is unknown, assume repl is busy.
-    } else {
-      serverSideState
-    }
+        .getOrElse(SessionState.Busy) // If repl state is unknown, assume repl is busy.
+    } else serverSideState
   }
 
   override def start(): Unit = {
